@@ -1,65 +1,246 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { listRecentRuns, loadTestRun } from '@/lib/storage';
+import { models, providers } from '@/lib/models';
+import { Card, SuccessRate, ProviderBadge, Button, ScenarioBadge } from '@/components/ui';
 
-export default function Home() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+export default async function Dashboard() {
+  const recentRuns = listRecentRuns(5);
+  const latestRun = recentRuns.length > 0 ? loadTestRun(recentRuns[0].id) : null;
+  const previousRun = recentRuns.length > 1 ? loadTestRun(recentRuns[1].id) : null;
+
+  // Calculate per-model stats from latest run
+  const modelStats = models.map((model) => {
+    if (!latestRun?.results[model.id]) {
+      return {
+        ...model,
+        providerName: providers[model.provider].name,
+        providerColor: providers[model.provider].color,
+        hasData: false,
+        overallSuccess: 0,
+        bestScenario: null as number | null,
+        worstScenario: null as number | null,
+        previousSuccess: null as number | null,
+      };
+    }
+
+    const modelResults = latestRun.results[model.id];
+    let totalRuns = 0;
+    let successfulRuns = 0;
+    let bestScenario: { num: number; rate: number } | null = null;
+    let worstScenario: { num: number; rate: number } | null = null;
+
+    for (const [scenario, result] of Object.entries(modelResults)) {
+      const scenarioNum = parseInt(scenario);
+      totalRuns += result.runs.length;
+      successfulRuns += result.runs.filter((r) => r.success).length;
+
+      const rate = result.summary.successRate;
+      if (!bestScenario || rate > bestScenario.rate) {
+        bestScenario = { num: scenarioNum, rate };
+      }
+      if (!worstScenario || rate < worstScenario.rate) {
+        worstScenario = { num: scenarioNum, rate };
+      }
+    }
+
+    const overallSuccess = totalRuns > 0 ? (successfulRuns / totalRuns) * 100 : 0;
+
+    // Get previous run stats for trend
+    let previousSuccess: number | null = null;
+    if (previousRun?.results[model.id]) {
+      const prevResults = previousRun.results[model.id];
+      let prevTotal = 0;
+      let prevSuccess = 0;
+      for (const result of Object.values(prevResults)) {
+        prevTotal += result.runs.length;
+        prevSuccess += result.runs.filter((r) => r.success).length;
+      }
+      previousSuccess = prevTotal > 0 ? (prevSuccess / prevTotal) * 100 : 0;
+    }
+
+    return {
+      ...model,
+      providerName: providers[model.provider].name,
+      providerColor: providers[model.provider].color,
+      hasData: true,
+      overallSuccess,
+      bestScenario: bestScenario?.num ?? null,
+      worstScenario: worstScenario?.num ?? null,
+      previousSuccess,
+    };
+  });
+
+  // Group models by provider
+  const modelsByProvider = {
+    openai: modelStats.filter((m) => m.provider === 'openai'),
+    anthropic: modelStats.filter((m) => m.provider === 'anthropic'),
+    google: modelStats.filter((m) => m.provider === 'google'),
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Dashboard
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            {latestRun
+              ? `Last run: ${new Date(latestRun.timestamp).toLocaleString()}`
+              : 'No test runs yet'}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        <Link href="/run">
+          <Button size="lg">Run Tests</Button>
+        </Link>
+      </div>
+
+      {/* Model Cards by Provider */}
+      {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+        <div key={provider}>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {providers[provider as keyof typeof providers].name}
+            </h2>
+            <div
+              className="h-1 flex-1 rounded"
+              style={{
+                backgroundColor: `${providers[provider as keyof typeof providers].color}30`,
+              }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {providerModels.map((model) => (
+              <Card key={model.id} className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {model.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {model.id}
+                    </p>
+                  </div>
+                  {model.hasData && (
+                    <SuccessRate value={model.overallSuccess} showLabel={false} />
+                  )}
+                </div>
+
+                {model.hasData ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Best scenario:
+                      </span>
+                      {model.bestScenario && (
+                        <ScenarioBadge scenario={model.bestScenario} />
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Worst scenario:
+                      </span>
+                      {model.worstScenario && (
+                        <ScenarioBadge scenario={model.worstScenario} />
+                      )}
+                    </div>
+                    {model.previousSuccess !== null && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          vs previous:
+                        </span>
+                        <span
+                          className={
+                            model.overallSuccess > model.previousSuccess
+                              ? 'text-green-600'
+                              : model.overallSuccess < model.previousSuccess
+                              ? 'text-red-600'
+                              : 'text-gray-500'
+                          }
+                        >
+                          {model.overallSuccess > model.previousSuccess && '+'}
+                          {(model.overallSuccess - model.previousSuccess).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No data yet. Run tests to see results.
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
         </div>
-      </main>
+      ))}
+
+      {/* Recent Runs */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Recent Test Runs
+        </h2>
+        {recentRuns.length > 0 ? (
+          <Card>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {recentRuns.map((run) => (
+                <Link
+                  key={run.id}
+                  href={`/results/${run.id}`}
+                  className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {new Date(run.timestamp).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(run.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {run.summary.models.slice(0, 3).map((modelId) => {
+                        const model = models.find((m) => m.id === modelId);
+                        return model ? (
+                          <ProviderBadge
+                            key={modelId}
+                            provider={model.provider}
+                            size="sm"
+                          />
+                        ) : null;
+                      })}
+                      {run.summary.models.length > 3 && (
+                        <span className="text-sm text-gray-500">
+                          +{run.summary.models.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {run.summary.totalTests} tests
+                    </span>
+                    <SuccessRate value={run.summary.successRate} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-8 text-center">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No test runs yet. Start your first benchmark!
+            </p>
+            <Link href="/run">
+              <Button>Run Tests</Button>
+            </Link>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
