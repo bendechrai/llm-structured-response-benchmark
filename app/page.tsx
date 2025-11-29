@@ -71,11 +71,11 @@ export default function HomePage() {
           across various prompting strategies.
         </p>
         <div className="flex gap-4 justify-center">
-          <Link href="/run">
-            <Button size="lg">Run Benchmark</Button>
-          </Link>
           <Link href="/dashboard">
-            <Button size="lg" variant="secondary">View Results</Button>
+            <Button size="lg">View Results</Button>
+          </Link>
+          <Link href="/run">
+            <Button size="lg" variant="secondary">Run Benchmark</Button>
           </Link>
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function HomePage() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
           Models Tested
         </h2>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#10a37f]"></span>
@@ -114,6 +114,26 @@ export default function HomePage() {
             <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <li>Gemini 2.5 Flash</li>
               <li>Gemini 3 Pro</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#f55036]"></span>
+              Groq
+            </h3>
+            <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>GPT-OSS 120B</li>
+              <li>Kimi K2</li>
+              <li>Llama 3.3 70B</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#6366f1]"></span>
+              OpenRouter
+            </h3>
+            <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>Qwen3 235B</li>
             </ul>
           </div>
         </div>
@@ -341,15 +361,15 @@ Please provide a corrected JSON response.`}</CodeBlock>
             <div className="text-sm text-gray-500">Seconds per successful run</div>
           </div>
           <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">Avg Attempts</div>
-            <div className="text-sm text-gray-500">Queries needed per success</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">Cost</div>
+            <div className="text-sm text-gray-500">Estimated cost per run</div>
           </div>
           <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">Token Usage</div>
             <div className="text-sm text-gray-500">Input + output tokens per run</div>
           </div>
           <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">Retry Rate</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">Retry Breakdown</div>
             <div className="text-sm text-gray-500">Success after 1, 2, 3 retries</div>
           </div>
         </div>
@@ -361,11 +381,11 @@ Please provide a corrected JSON response.`}</CodeBlock>
           Ready to run the benchmark?
         </h2>
         <div className="flex gap-4 justify-center">
-          <Link href="/run">
-            <Button size="lg">Start Benchmark</Button>
-          </Link>
           <Link href="/dashboard">
-            <Button size="lg" variant="secondary">View Past Results</Button>
+            <Button size="lg">View Results</Button>
+          </Link>
+          <Link href="/run">
+            <Button size="lg" variant="secondary">Run Benchmark</Button>
           </Link>
         </div>
       </div>

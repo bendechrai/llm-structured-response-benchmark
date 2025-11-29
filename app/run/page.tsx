@@ -14,8 +14,9 @@ import type { ScenarioResult, RunResult } from '@/lib/storage';
 interface Model {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google';
+  provider: 'openai' | 'anthropic' | 'google' | 'groq' | 'openrouter';
   providerName: string;
+  hasEnvKey: boolean;
 }
 
 type AttemptStatus = 'pending' | 'running' | 'failed' | 'success' | 'skipped';
@@ -375,22 +376,25 @@ function LiveChartsSection({ runStatus, models }: { runStatus: RunStatus; models
 
 export default function RunTestsPage() {
   const router = useRouter();
-  const { getHeaders } = useApiKeys();
+  const { getHeaders, hasKey } = useApiKeys();
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [selectedScenarios, setSelectedScenarios] = useState<Set<number>>(new Set([1, 2, 3, 4]));
-  const [runsPerScenario, setRunsPerScenario] = useState(10);
+  const [runsPerScenario, setRunsPerScenario] = useState(3);
   const [isRunning, setIsRunning] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const [runStatus, setRunStatus] = useState<RunStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const modelHasKey = useCallback((model: Model) => {
+    return model.hasEnvKey || hasKey(model.provider);
+  }, [hasKey]);
 
   useEffect(() => {
     fetch('/api/models')
       .then((res) => res.json())
       .then((data) => {
         setModels(data.models);
-        setSelectedModels(new Set(data.models.map((m: Model) => m.id)));
       })
       .catch((err) => {
         setError('Failed to load models');
@@ -411,6 +415,12 @@ export default function RunTestsPage() {
         console.error('Failed to check for active runs:', err);
       });
   }, []);
+
+  useEffect(() => {
+    if (models.length === 0) return;
+    const modelsWithKeys = models.filter((m) => modelHasKey(m));
+    setSelectedModels(new Set(modelsWithKeys.map((m) => m.id)));
+  }, [models, modelHasKey]);
 
   useEffect(() => {
     if (!runId || !isRunning) return;
@@ -465,8 +475,9 @@ export default function RunTestsPage() {
   }, []);
 
   const selectAllModels = useCallback(() => {
-    setSelectedModels(new Set(models.map((m) => m.id)));
-  }, [models]);
+    const modelsWithKeys = models.filter((m) => modelHasKey(m));
+    setSelectedModels(new Set(modelsWithKeys.map((m) => m.id)));
+  }, [models, modelHasKey]);
 
   const deselectAllModels = useCallback(() => {
     setSelectedModels(new Set());
@@ -686,38 +697,64 @@ export default function RunTestsPage() {
               </div>
             </div>
 
+            {models.length > 0 && models.some((m) => !modelHasKey(m)) && (
+              <div className="mb-6 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>
+                  Some models are disabled because no API key is configured.{' '}
+                  <Link href="/settings" className="underline hover:no-underline font-medium">
+                    Add keys in Settings
+                  </Link>
+                  {' '}to enable them.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-6">
               {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
                 <div key={provider}>
                   <div className="flex items-center gap-2 mb-3">
-                    <ProviderBadge provider={provider as 'openai' | 'anthropic' | 'google'} />
+                    <ProviderBadge provider={provider as 'openai' | 'anthropic' | 'google' | 'groq' | 'openrouter'} />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {providerModels.map((model) => (
-                      <label
-                        key={model.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedModels.has(model.id)
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedModels.has(model.id)}
-                          onChange={() => toggleModel(model.id)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {model.name}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {model.id}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
+                    {providerModels.map((model) => {
+                      const hasApiKey = modelHasKey(model);
+                      return (
+                        <label
+                          key={model.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            !hasApiKey
+                              ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+                              : selectedModels.has(model.id)
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer'
+                                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedModels.has(model.id)}
+                            onChange={() => hasApiKey && toggleModel(model.id)}
+                            disabled={!hasApiKey}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 disabled:opacity-50"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {model.name}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {model.id}
+                            </p>
+                          </div>
+                          {!hasApiKey && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              No API key
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -772,7 +809,7 @@ export default function RunTestsPage() {
                   min={1}
                   max={20}
                   value={runsPerScenario}
-                  onChange={(e) => setRunsPerScenario(parseInt(e.target.value) || 10)}
+                  onChange={(e) => setRunsPerScenario(parseInt(e.target.value) || 3)}
                   className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </label>

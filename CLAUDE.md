@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an LLM Structured Response Adherence Benchmark tool that tests how well different language models (OpenAI, Anthropic, Google) adhere to specific JSON response formats. The application tests 4 different scenarios (one-shot vs sequential, strict vs non-strict mode) across 6 different models.
+This is an LLM Structured Output Benchmark tool that tests how well different language models (OpenAI, Anthropic, Google) adhere to specific JSON response formats. The application tests 4 different scenarios (one-shot vs sequential, strict vs non-strict mode) across 6 different models.
 
 ## Development Commands
 
@@ -29,7 +29,7 @@ The development server runs on http://localhost:3000
 ### Core Structure
 - **Next.js App Router** - Uses the modern app directory structure
 - **AI SDK 6.x (beta)** - For LLM interactions via `generateObject` and `generateText`
-- **Zod Schemas** - For structured response validation (`lib/schemas.ts`)
+- **Zod Schemas** - For structured output validation (`lib/schemas.ts`)
 - **File-based Storage** - Test results stored as JSON files in local filesystem
 - **React Components** - Reusable UI components in `components/` directory
 
@@ -42,7 +42,7 @@ The development server runs on http://localhost:3000
 ### Important Files
 - `lib/models.ts` - Configuration for 6 LLM models across 3 providers (OpenAI, Anthropic, Google)
 - `lib/test-runner.ts` - Core test execution engine with 4 test scenarios
-- `lib/schemas.ts` - Zod schemas for structured response validation
+- `lib/schemas.ts` - Zod schemas for structured output validation
 - `lib/storage.ts` - File-based storage system for test results
 - `app/api/run/route.ts` - API endpoint for running benchmark tests
 

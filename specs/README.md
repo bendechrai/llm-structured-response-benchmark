@@ -1,8 +1,8 @@
-# LLM Structured Response Adherence Benchmark
+# LLM Structured Output Benchmark
 
 ## Purpose
 
-This tool benchmarks how well different LLM models adhere to structured JSON response formats. It tests both:
+This tool benchmarks how well different LLM models adhere to structured output formats. It tests both:
 
 1. **One-shot approaches** - Single request with format instructions
 2. **Sequential approaches** - Building JSON across multiple requests

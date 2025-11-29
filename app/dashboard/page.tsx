@@ -29,8 +29,8 @@ export default async function Dashboard() {
     const modelResults = latestRun.results[model.id];
     let totalRuns = 0;
     let successfulRuns = 0;
-    let bestScenario: { num: number; rate: number } | null = null;
-    let worstScenario: { num: number; rate: number } | null = null;
+    let bestScenario: { num: number; rate: number; time: number } | null = null;
+    let worstScenario: { num: number; rate: number; time: number } | null = null;
 
     for (const [scenario, result] of Object.entries(modelResults)) {
       const scenarioNum = parseInt(scenario);
@@ -38,11 +38,21 @@ export default async function Dashboard() {
       successfulRuns += result.runs.filter((r) => r.success).length;
 
       const rate = result.summary.successRate;
-      if (!bestScenario || rate > bestScenario.rate) {
-        bestScenario = { num: scenarioNum, rate };
+      const time = result.summary.averageDurationMs;
+
+      const isBetter = !bestScenario ||
+        rate > bestScenario.rate ||
+        (rate === bestScenario.rate && time < bestScenario.time);
+
+      const isWorse = !worstScenario ||
+        rate < worstScenario.rate ||
+        (rate === worstScenario.rate && time > worstScenario.time);
+
+      if (isBetter) {
+        bestScenario = { num: scenarioNum, rate, time };
       }
-      if (!worstScenario || rate < worstScenario.rate) {
-        worstScenario = { num: scenarioNum, rate };
+      if (isWorse) {
+        worstScenario = { num: scenarioNum, rate, time };
       }
     }
 
@@ -78,6 +88,8 @@ export default async function Dashboard() {
     openai: modelStats.filter((m) => m.provider === 'openai'),
     anthropic: modelStats.filter((m) => m.provider === 'anthropic'),
     google: modelStats.filter((m) => m.provider === 'google'),
+    groq: modelStats.filter((m) => m.provider === 'groq'),
+    openrouter: modelStats.filter((m) => m.provider === 'openrouter'),
   };
 
   return (
@@ -98,86 +110,6 @@ export default async function Dashboard() {
           <Button size="lg">Run Tests</Button>
         </Link>
       </div>
-
-      {/* Model Cards by Provider */}
-      {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
-        <div key={provider}>
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {providers[provider as keyof typeof providers].name}
-            </h2>
-            <div
-              className="h-1 flex-1 rounded"
-              style={{
-                backgroundColor: `${providers[provider as keyof typeof providers].color}30`,
-              }}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {providerModels.map((model) => (
-              <Card key={model.id} className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {model.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {model.id}
-                    </p>
-                  </div>
-                  {model.hasData && (
-                    <SuccessRate value={model.overallSuccess} showLabel={false} />
-                  )}
-                </div>
-
-                {model.hasData ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Best scenario:
-                      </span>
-                      {model.bestScenario && (
-                        <ScenarioBadge scenario={model.bestScenario} />
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Worst scenario:
-                      </span>
-                      {model.worstScenario && (
-                        <ScenarioBadge scenario={model.worstScenario} />
-                      )}
-                    </div>
-                    {model.previousSuccess !== null && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          vs previous:
-                        </span>
-                        <span
-                          className={
-                            model.overallSuccess > model.previousSuccess
-                              ? 'text-green-600'
-                              : model.overallSuccess < model.previousSuccess
-                              ? 'text-red-600'
-                              : 'text-gray-500'
-                          }
-                        >
-                          {model.overallSuccess > model.previousSuccess && '+'}
-                          {(model.overallSuccess - model.previousSuccess).toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    No data yet. Run tests to see results.
-                  </p>
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
-      ))}
 
       {/* Recent Runs */}
       <div>
@@ -241,6 +173,94 @@ export default async function Dashboard() {
           </Card>
         )}
       </div>
+
+      {/* Model Cards by Provider */}
+      {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+        <div key={provider}>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {providers[provider as keyof typeof providers].name}
+            </h2>
+            <div
+              className="h-1 flex-1 rounded"
+              style={{
+                backgroundColor: `${providers[provider as keyof typeof providers].color}30`,
+              }}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {providerModels.map((model) => (
+              <Card key={model.id} className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {model.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {model.id}
+                    </p>
+                  </div>
+                  {model.hasData && (
+                    <SuccessRate value={model.overallSuccess} showLabel={false} />
+                  )}
+                </div>
+
+                {model.hasData ? (
+                  <div className="space-y-3">
+                    {model.bestScenario !== model.worstScenario ? (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Best scenario:
+                          </span>
+                          {model.bestScenario && (
+                            <ScenarioBadge scenario={model.bestScenario} />
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Worst scenario:
+                          </span>
+                          {model.worstScenario && (
+                            <ScenarioBadge scenario={model.worstScenario} />
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        All scenarios: {model.overallSuccess.toFixed(0)}%
+                      </div>
+                    )}
+                    {model.previousSuccess !== null && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          vs previous:
+                        </span>
+                        <span
+                          className={
+                            model.overallSuccess > model.previousSuccess
+                              ? 'text-green-600'
+                              : model.overallSuccess < model.previousSuccess
+                              ? 'text-red-600'
+                              : 'text-gray-500'
+                          }
+                        >
+                          {model.overallSuccess > model.previousSuccess && '+'}
+                          {(model.overallSuccess - model.previousSuccess).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No data yet. Run tests to see results.
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

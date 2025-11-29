@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LLM Structured Response Benchmark",
-  description: "Test structured JSON response adherence across LLM providers",
+  title: "LLM Structured Output Benchmark",
+  description: "Test structured output adherence across LLM providers",
 };
 
 export default function RootLayout({

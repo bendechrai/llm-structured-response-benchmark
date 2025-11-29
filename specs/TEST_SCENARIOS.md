@@ -2,7 +2,7 @@
 
 ## Overview
 
-Four test scenarios compare structured response adherence across different approaches:
+Four test scenarios compare structured output adherence across different approaches:
 
 1. **One-shot, non-strict** - Traditional prompt engineering
 2. **One-shot, strict** - AI SDK `generateObject` with Zod

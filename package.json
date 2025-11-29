@@ -1,5 +1,5 @@
 {
-  "name": "llm-structured-response-benchmark",
+  "name": "llm-structured-output-benchmark",
   "version": "0.1.0",
   "private": true,
   "scripts": {

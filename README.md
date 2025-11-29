@@ -1,21 +1,24 @@
-# LLM Structured Response Benchmark
+# LLM Structured Output Benchmark
 
-A comprehensive benchmarking tool that tests how well different Language Models adhere to structured JSON response formats across multiple providers (OpenAI, Anthropic, Google).
+A comprehensive benchmarking tool that tests how well different Language Models adhere to structured output formats across multiple providers (OpenAI, Anthropic, Google, Groq, OpenRouter).
 
 ## Overview
 
-This tool tests **6 different models** across **4 scenarios** with **10 runs each**, providing detailed insights into:
+This tool tests **10 different models** across **4 scenarios** with **10 runs each**, providing detailed insights into:
 
-- **Success rates** for different prompting approaches
-- **Retry behavior** and error recovery
-- **Provider performance** comparisons
+- **Success rates** for different prompting approaches (first attempt and after retries)
+- **Retry behavior** and error recovery patterns
+- **Cost analysis** with per-model pricing
+- **Response time** comparisons
 - **Token usage** tracking
 
 ### Supported Models
 
 - **OpenAI**: GPT-5, GPT-4o
-- **Anthropic**: Claude Sonnet 4.5, Claude Opus 4.1
+- **Anthropic**: Claude Sonnet 4.5, Claude Opus 4.5
 - **Google**: Gemini 2.5 Flash, Gemini 3 Pro
+- **Groq**: GPT-OSS 120B, Kimi K2, Llama 3.3 70B
+- **OpenRouter**: Qwen3 235B
 
 ### Test Scenarios
 
@@ -39,7 +42,7 @@ This tool tests **6 different models** across **4 scenarios** with **10 runs eac
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd llm-structured-response-benchmark
+cd llm-structured-output-benchmark
 ```
 
 2. Install dependencies:
@@ -57,7 +60,11 @@ cp .env.example .env.local
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GOOGLE_GENERATIVE_AI_API_KEY=your_google_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
+
+Alternatively, you can configure API keys in the Settings page of the web interface.
 
 5. Run the development server:
 ```bash
@@ -154,8 +161,10 @@ npm run build && npm test
 | `OPENAI_API_KEY` | No* | OpenAI API access |
 | `ANTHROPIC_API_KEY` | No* | Anthropic API access |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | No* | Google AI API access |
+| `GROQ_API_KEY` | No* | Groq API access |
+| `OPENROUTER_API_KEY` | No* | OpenRouter API access |
 
-*At least one API key is required to run tests.
+*At least one API key is required to run tests. Keys can also be configured via the Settings page.
 
 ### Model Configuration
 
