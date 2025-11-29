@@ -1,18 +1,8 @@
-import { z } from 'zod';
-import {
-  ResponseSchema,
-  SequentialPart1Schema,
-  SequentialPart2Schema,
-  SequentialPart3Schema,
-} from './schemas';
-
 /**
- * Convert Zod schema to JSON Schema string for prompt instructions
+ * Prompts for the LLM benchmark tests
+ * Uses example-based prompts instead of JSON Schema to avoid "schema echo" problem
+ * where models return the schema definition instead of data conforming to it.
  */
-export function schemaToJsonString(schema: z.ZodType): string {
-  const jsonSchema = z.toJSONSchema(schema, { target: 'draft-7' });
-  return JSON.stringify(jsonSchema, null, 2);
-}
 
 /**
  * System prompt for the recruiter AI
@@ -29,20 +19,32 @@ When you identify a skill gap in the team, recommend a specific role that would 
 Be specific and practical in your recommendations.`;
 
 /**
- * One-shot prompt with JSON schema instructions (non-strict mode)
+ * One-shot prompt with example (non-strict mode)
  */
 export function getOneShotPrompt(): string {
   return `Based on the conversation above, recommend a team member who could help solve their problem.
 
-Respond ONLY with valid JSON matching this exact structure:
-${schemaToJsonString(ResponseSchema)}
+Respond ONLY with valid JSON like this example:
+{
+  "recommendation": "I think you need to hire a [role] because [explanation of how they address the team's problem]...",
+  "action": {
+    "type": "create_actor",
+    "actor": {
+      "title": "Job Title Here",
+      "reason": "Why this role addresses the team's skill gap",
+      "skills": ["skill1", "skill2", "skill3"],
+      "prompt": "You are an expert in [domain]. You help teams by [description of approach]...",
+      "model": "reasoning"
+    }
+  }
+}
 
 Important:
 - Return ONLY valid JSON, no markdown code blocks or backticks
-- All fields are required unless marked as nullable
 - The "recommendation" field should start with "I think you need to hire..."
-- Skills array should have 3-7 items
-- Follow the exact structure shown above`;
+- Skills array should have 3-7 specific technical skills
+- "model" should be "reasoning" for analytical tasks or "semantic" for creative tasks
+- Set "action" to null if no recommendation is appropriate`;
 }
 
 /**
@@ -66,12 +68,12 @@ export const sequentialPrompts = {
   step1: {
     nonStrict: `Based on the conversation, what type of team member should this team add?
 
-Respond with JSON:
-${schemaToJsonString(SequentialPart1Schema)}
+Respond with JSON like this example:
+{"recommendation": "I recommend hiring a [role] because [reason]...", "action": "create_actor"}
 
 Important:
 - Return ONLY valid JSON, no markdown code blocks
-- The "recommendation" should explain your hiring recommendation
+- The "recommendation" should explain your hiring recommendation (at least 20 characters)
 - Set "action" to "create_actor" if recommending someone, or null if not`,
 
     strict: `Based on the conversation, what type of team member should this team add?
@@ -86,13 +88,13 @@ Example: {"recommendation": "I recommend hiring...", "action": "create_actor"}`,
   step2: {
     nonStrict: `For the role you recommended, provide their details.
 
-Respond with JSON:
-${schemaToJsonString(SequentialPart2Schema)}
+Respond with JSON like this example:
+{"title": "Database Administrator", "reason": "The team needs database expertise to optimize their slow queries and design scalable schemas", "skills": ["PostgreSQL", "Query Optimization", "Database Design"]}
 
 Important:
 - Return ONLY valid JSON, no markdown code blocks
-- Provide 3-7 specific skills
-- The "reason" should explain how this role addresses the team's problem`,
+- Provide 3-7 specific technical skills
+- The "reason" should explain how this role addresses the team's problem (at least 20 characters)`,
 
     strict: `For the role you recommended, provide their details.
 
@@ -107,12 +109,12 @@ Example: {"title": "Senior DBA", "reason": "The team needs...", "skills": ["Post
   step3: {
     nonStrict: `For this role, provide the AI system prompt and model type.
 
-Respond with JSON:
-${schemaToJsonString(SequentialPart3Schema)}
+Respond with JSON like this example:
+{"prompt": "You are an expert database administrator. You help teams optimize queries, design schemas, and ensure data integrity...", "model": "reasoning"}
 
 Important:
 - Return ONLY valid JSON, no markdown code blocks
-- The "prompt" should be a system prompt for an AI assistant in this role
+- The "prompt" should be a detailed system prompt (at least 30 characters)
 - "model" should be "reasoning" for analytical tasks or "semantic" for creative tasks`,
 
     strict: `For this role, provide the AI configuration.

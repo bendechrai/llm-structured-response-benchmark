@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "id": "6dbe7533-da5f-4384-a159-6cf2e2050ff5",
+      "timestamp": "2025-11-29T16:49:26.618Z",
+      "filename": "2025-11-29T16-49-26.618Z.json",
+      "summary": {
+        "models": [
+          "openai-gpt5",
+          "openai-gpt4o",
+          "anthropic-sonnet",
+          "anthropic-opus",
+          "google-flash",
+          "google-pro",
+          "groq-gpt-oss-120b",
+          "groq-kimi-k2",
+          "groq-llama-3.3-70b",
+          "openrouter-qwen3-235b"
+        ],
+        "totalTests": 96,
+        "successRate": 100
+      }
+    },
+    {
       "id": "459da588-c6d8-4986-baeb-225e067723f4",
       "timestamp": "2025-11-28T23:58:56.194Z",
       "filename": "2025-11-28T23-58-56.194Z.json",

@@ -1,5 +1,4 @@
 import {
-  schemaToJsonString,
   systemPrompt,
   getOneShotPrompt,
   oneShotStrictPrompt,
@@ -7,28 +6,8 @@ import {
   getRetryPrompt,
   extractJson,
 } from '../lib/prompts';
-import { ResponseSchema } from '../lib/schemas';
 
 describe('Prompt Generation', () => {
-  describe('schemaToJsonString', () => {
-    it('should convert Zod schema to JSON string', () => {
-      const jsonString = schemaToJsonString(ResponseSchema);
-
-      expect(typeof jsonString).toBe('string');
-
-      // Should be valid JSON
-      const parsed = JSON.parse(jsonString);
-      expect(parsed).toHaveProperty('$schema');
-    });
-
-    it('should be a valid JSON string', () => {
-      const jsonString = schemaToJsonString(ResponseSchema);
-
-      // Should not throw when parsing
-      expect(() => JSON.parse(jsonString)).not.toThrow();
-    });
-  });
-
   describe('systemPrompt', () => {
     it('should be a non-empty string', () => {
       expect(typeof systemPrompt).toBe('string');
@@ -53,11 +32,11 @@ describe('Prompt Generation', () => {
       expect(prompt.length).toBeGreaterThan(0);
     });
 
-    it('should include JSON schema', () => {
+    it('should include JSON example', () => {
       const prompt = getOneShotPrompt();
 
       expect(prompt).toMatch(/JSON/i);
-      expect(prompt).toMatch(/schema/i);
+      expect(prompt).toMatch(/example/i);
     });
 
     it('should include format instructions', () => {
